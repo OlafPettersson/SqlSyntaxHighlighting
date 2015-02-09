@@ -2,120 +2,112 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text.RegularExpressions;
+using System.Windows.Controls;
+using System.Windows.Media.TextFormatting;
+using System.Xml;
+using ConsoleApplication1;
+using Microsoft.VisualStudio.Language.StandardClassification;
 using Microsoft.VisualStudio.Text;
 using Microsoft.VisualStudio.Text.Classification;
 using Microsoft.VisualStudio.Text.Tagging;
+using PoorMansTSqlFormatterLib;
+using PoorMansTSqlFormatterLib.Formatters;
+using PoorMansTSqlFormatterLib.Interfaces;
+using PoorMansTSqlFormatterLib.Parsers;
+using PoorMansTSqlFormatterLib.Tokenizers;
 using SqlSyntaxHighlighting.NaturalTextTaggers;
 
 namespace SqlSyntaxHighlighting
 {
-	class SqlClassifier : IClassifier
-	{
-		private readonly char[] keywordPrefixCharacters = new[] { '\t', ' ', '"', '(' };
-		private readonly char[] keywordPostfixCharacters = new[] { '\t', ' ', '"', ')' };
-		private readonly char[] functionPrefixCharacters = new[] { '\t', ' ', '"', ',', '(' };
-		private readonly char[] functionPostfixCharacters = new[] { '\t', '(' };
+    class SqlClassifier : IClassifier
+    {
+        private readonly IClassificationType keywordType;
+        private readonly IClassificationType functionType;
+        readonly ITagAggregator<NaturalTextTag> tagger;
 
-		private readonly List<string> keywords = new List<string> {
-		    "select", "insert", "delete", "update",
-			"into", "values", "truncate", "distinct", "top", "with",
-		    "from", "join", "inner join", "outer join", "left outer join", "right outer join", "left join", "right join", "cross join",
-			"union", "except",
-		    "where", "like", "between", "having", "exists",
-		    "order by", "asc", "desc", "over", "group by", 
-		    "on", "in", "is", "not", "as", "and", "or", "all",
-			"create", "alter", "drop",
-			"table", "function", "procedure", "view", "schema",
-			"declare", "set",
-			"if", "begin", "then", "else", "end", "for", "while", "null",
-			"transaction", "commit", "rollback",
-			"exec", "return", "returns", "print", "use",
-			
-			"bigint", "numeric", "bit", "smallint", "decimal", "smallmoney", "int", "tinyint", "money", "float", "real",
-			"date", "datetimeoffset", "datetime2", "smalldatetime", "datetime", "time", "timestamp",
-			"char", "varchar", "text", "nchar", "nvarchar", "ntext", 
-			"binary", "varbinary", "image", 
-			"cursor", "hierarchyid", "uniqueidentifier", "sql_variant", "xml"
-		};
+        private CustomFormatter formatter;
+        private TSqlStandardTokenizer tokenizer;
+        private TSqlStandardParser parser;
+        private IClassificationType operatorType;
+        private IClassificationType stringType;
+        private IClassificationType numberType;
+        private IClassificationType parameterType;
+        private IClassificationType commentType;
 
-		private readonly List<string> functions = new List<string> {
-		    "count", "count_big", "sum", "min", "max", "avg",
-			"abs", "newid", "rand", "isnull", "coalesce",
-			"left", "right", "substring", "ltrim", "rtrim", "upper", "lower", "charindex", "len", "stuff",
-			"getdate", "dateadd", "datediff", "datepart", "datename",
-			"convert", "cast",
-			"row_number"
-		};
+        internal SqlClassifier(ITagAggregator<NaturalTextTag> tagger, IClassificationTypeRegistryService classificationRegistry)
+        {
+            this.tagger = tagger;
 
-		private readonly Regex variables = new Regex(@"(?:^|[""\s(+,=])(?<Variable>@[a-z0-9_]+)(?:$|[""\s)+,])", RegexOptions.IgnoreCase | RegexOptions.Multiline);
+            keywordType = classificationRegistry.GetClassificationType("sql-keyword");
+            operatorType = classificationRegistry.GetClassificationType("sql-operator");
+            stringType = classificationRegistry.GetClassificationType("sql-string");
+            functionType = classificationRegistry.GetClassificationType("sql-function");
+            numberType = classificationRegistry.GetClassificationType("sql-number");
+            parameterType = classificationRegistry.GetClassificationType("sql-parameter");
+            commentType = classificationRegistry.GetClassificationType("sql-comment");
 
+            formatter = new CustomFormatter();
+            tokenizer = new TSqlStandardTokenizer();
+            parser = new TSqlStandardParser();
+        }
 
-		private readonly IClassificationType keywordType;
-		private readonly IClassificationType functionType;
-		private readonly IClassificationType variableType;
-		readonly ITagAggregator<NaturalTextTag> tagger;
+        public IList<ClassificationSpan> GetClassificationSpans(SnapshotSpan span)
+        {
+            IList<ClassificationSpan> classifiedSpans = new List<ClassificationSpan>();
 
-		internal SqlClassifier(ITagAggregator<NaturalTextTag> tagger, IClassificationTypeRegistryService classificationRegistry)
-		{
-			this.tagger = tagger;
-			keywordType = classificationRegistry.GetClassificationType("sql-keyword");
-			functionType = classificationRegistry.GetClassificationType("sql-function");
-			variableType = classificationRegistry.GetClassificationType("sql-variable");
-		}
+            foreach (var tagSpan in tagger.GetTags(span))
+            {
+                var snapshot = tagSpan.Span.GetSpans(span.Snapshot).First();
 
-		public IList<ClassificationSpan> GetClassificationSpans(SnapshotSpan span)
-		{
-			IList<ClassificationSpan> classifiedSpans = new List<ClassificationSpan>();
+                var text = snapshot.GetText();
+                var index = 0;
 
-			var tags = tagger.GetTags(span).ToList();
-			foreach (IMappingTagSpan<NaturalTextTag> tagSpan in tags)
-			{
-				SnapshotSpan snapshot = tagSpan.Span.GetSpans(span.Snapshot).First();
+                var tokens = tokenizer.TokenizeSQL(text);
+                var doc = parser.ParseSQL(tokens);
+                var sql = formatter.FormatSQLTree(doc);
 
-				string text = snapshot.GetText().ToLowerInvariant();
-				int index = -1;
+                if (doc.DocumentElement == null || (doc.DocumentElement.HasAttribute("errorFound") && doc.DocumentElement.GetAttribute("errorFound").Equals("1", StringComparison.InvariantCultureIgnoreCase)))
+                    return classifiedSpans;
 
-				// keywords
-				foreach (string keyword in keywords)
-				{
-					while (snapshot.Length > index + 1 && (index = text.IndexOf(keyword, index + 1)) > -1)
-					{
-						// controleren of het gevonden keyword niet tegen of in een ander woord staat
-						if ((index > 0 && keywordPrefixCharacters.Contains(text[index - 1]) == false) ||
-							(index + keyword.Length < text.Length && keywordPostfixCharacters.Contains(text[index + keyword.Length]) == false))
-							continue;
+                foreach (var pair in sql)
+                {
+                    var length = pair.Value.Length;
 
-						classifiedSpans.Add(new ClassificationSpan(new SnapshotSpan(snapshot.Start + index, keyword.Length), keywordType));
-					}
-				}
+                    if (pair.Key != null)
+                    {
+                        if (pair.Key.Equals("SQLOperator", StringComparison.InvariantCultureIgnoreCase))
+                            classifiedSpans.Add(new ClassificationSpan(new SnapshotSpan(snapshot.Start + index, length), operatorType));
 
-				// functions
-				foreach (string function in functions)
-				{
-					while (snapshot.Length > index + 1 && (index = text.IndexOf(function, index + 1)) > -1)
-					{
-						// controleren of het gevonden keyword niet tegen of in een ander woord staat
-						if ((index > 0 && functionPrefixCharacters.Contains(text[index - 1]) == false) ||
-							(index + function.Length < text.Length && functionPostfixCharacters.Contains(text[index + function.Length]) == false))
-							continue;
+                        if (pair.Key.Equals("SQLKeyword", StringComparison.InvariantCultureIgnoreCase))
+                            classifiedSpans.Add(new ClassificationSpan(new SnapshotSpan(snapshot.Start + index, length), keywordType));
 
-						classifiedSpans.Add(new ClassificationSpan(new SnapshotSpan(snapshot.Start + index, function.Length), functionType));
-					}
-				}
+                        if (pair.Key.Equals("SQLString", StringComparison.InvariantCultureIgnoreCase))
+                            classifiedSpans.Add(new ClassificationSpan(new SnapshotSpan(snapshot.Start + index, length), stringType));
 
-				// variables
-				var matches = variables.Matches(text);
-				foreach (Match match in matches)
-					classifiedSpans.Add(new ClassificationSpan(new SnapshotSpan(snapshot.Start + match.Groups["Variable"].Index, match.Groups["Variable"].Length), variableType));
-			}
+                        if (pair.Key.Equals("SQLFunction", StringComparison.InvariantCultureIgnoreCase))
+                            classifiedSpans.Add(new ClassificationSpan(new SnapshotSpan(snapshot.Start + index, length), functionType));
 
-			return classifiedSpans;
-		}
+                        if (pair.Key.Equals("SQLNumber", StringComparison.InvariantCultureIgnoreCase))
+                            classifiedSpans.Add(new ClassificationSpan(new SnapshotSpan(snapshot.Start + index, length), numberType));
 
-		public event EventHandler<ClassificationChangedEventArgs> ClassificationChanged
-		{
-			add { }
-			remove { }
-		}
-	}
+                        if (pair.Key.Equals("SQLParameter", StringComparison.InvariantCultureIgnoreCase))
+                            classifiedSpans.Add(new ClassificationSpan(new SnapshotSpan(snapshot.Start + index, length), parameterType));
+
+                        if (pair.Key.Equals("SQLComment", StringComparison.InvariantCultureIgnoreCase))
+                            classifiedSpans.Add(new ClassificationSpan(new SnapshotSpan(snapshot.Start + index, length), commentType));
+                    }
+
+                    index += length;
+                }
+            }
+
+            return classifiedSpans;
+        }
+
+        public event EventHandler<ClassificationChangedEventArgs> ClassificationChanged
+        {
+            add { }
+            remove { }
+        }
+    }
 }
