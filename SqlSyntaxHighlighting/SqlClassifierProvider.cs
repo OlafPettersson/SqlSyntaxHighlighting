@@ -3,7 +3,7 @@ using Microsoft.VisualStudio.Text;
 using Microsoft.VisualStudio.Text.Classification;
 using Microsoft.VisualStudio.Text.Tagging;
 using Microsoft.VisualStudio.Utilities;
-using SqlSyntaxHighlighting.NaturalTextTaggers;
+using SqlSyntaxHighlighting.StringTaggers;
 
 namespace SqlSyntaxHighlighting
 {
@@ -23,7 +23,7 @@ namespace SqlSyntaxHighlighting
 
 		public IClassifier GetClassifier(ITextBuffer buffer)
 		{
-			var tagAggregator = TagAggregatorFactory.CreateTagAggregator<NaturalTextTag>(buffer);
+			var tagAggregator = TagAggregatorFactory.CreateTagAggregator<StringTag>(buffer);
 			return new SqlClassifier(tagAggregator, ClassificationRegistry);
 		}
 	}

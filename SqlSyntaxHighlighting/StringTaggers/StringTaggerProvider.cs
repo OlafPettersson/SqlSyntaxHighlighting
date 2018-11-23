@@ -6,14 +6,14 @@ using Microsoft.VisualStudio.Text;
 using Microsoft.VisualStudio.Text.Classification;
 using Microsoft.VisualStudio.Text.Tagging;
 using Microsoft.VisualStudio.Utilities;
-using SqlSyntaxHighlighting.NaturalTextTaggers.CSharp;
+using SqlSyntaxHighlighting.StringTaggers.CSharp;
 
-namespace SqlSyntaxHighlighting.NaturalTextTaggers
+namespace SqlSyntaxHighlighting.StringTaggers
 {
 	[Export(typeof(ITaggerProvider))]
 	[ContentType("CSharp")]
-	[TagType(typeof(NaturalTextTag))]
-	internal class CommentTextTaggerProvider : ITaggerProvider
+	[TagType(typeof(StringTag))]
+	internal class StringTaggerProvider : ITaggerProvider
 	{
 		[Import]
 		internal IClassifierAggregatorService ClassifierAggregatorService { get; set; }
@@ -26,17 +26,17 @@ namespace SqlSyntaxHighlighting.NaturalTextTaggers
 			if (buffer == null)
 				throw new ArgumentNullException("buffer");
 
-			// Due to an issue with the built-in C# classifier, we avoid using it.
-			if (buffer.ContentType.IsOfType("csharp"))
-				return new CSharpCommentTextTagger(buffer) as ITagger<T>;
+            // Due to an issue with the built-in C# classifier, we avoid using it.
+            if (buffer.ContentType.IsOfType("csharp"))
+                return new CSharpStringTagger(buffer) as ITagger<T>;
 
-			var classifierAggregator = ClassifierAggregatorService.GetClassifier(buffer);
+            var classifierAggregator = ClassifierAggregatorService.GetClassifier(buffer);
 
 			return new CommentTextTagger(buffer, classifierAggregator) as ITagger<T>;
 		}
 	}
 
-	internal class CommentTextTagger : ITagger<NaturalTextTag>, IDisposable
+	internal class CommentTextTagger : ITagger<StringTag>, IDisposable
 	{
 		readonly ITextBuffer buffer;
 		readonly IClassifier classifier;
@@ -49,7 +49,7 @@ namespace SqlSyntaxHighlighting.NaturalTextTaggers
 			classifier.ClassificationChanged += ClassificationChanged;
 		}
 
-		public IEnumerable<ITagSpan<NaturalTextTag>> GetTags(NormalizedSnapshotSpanCollection spans)
+		public IEnumerable<ITagSpan<StringTag>> GetTags(NormalizedSnapshotSpanCollection spans)
 		{
 			if (classifier == null || spans == null || spans.Count == 0)
 				yield break;
@@ -63,7 +63,7 @@ namespace SqlSyntaxHighlighting.NaturalTextTaggers
 
 					if (name.Contains("string")	&& name.Contains("xml doc tag") == false)
 					{
-						yield return new TagSpan<NaturalTextTag>(classificationSpan.Span, new NaturalTextTag());
+						yield return new TagSpan<StringTag>(classificationSpan.Span, new StringTag());
 					}
 				}
 			}
@@ -71,10 +71,8 @@ namespace SqlSyntaxHighlighting.NaturalTextTaggers
 
 		void ClassificationChanged(object sender, ClassificationChangedEventArgs e)
 		{
-			var temp = TagsChanged;
-			if (temp != null)
-				temp(this, new SnapshotSpanEventArgs(e.ChangeSpan));
-		}
+            TagsChanged?.Invoke(this, new SnapshotSpanEventArgs(e.ChangeSpan));
+        }
 
 		public event EventHandler<SnapshotSpanEventArgs> TagsChanged;
 

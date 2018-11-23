@@ -1,9 +1,10 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
-<Vsix xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" Version="1.0.0" xmlns="http://schemas.microsoft.com/developer/vsx-schema/2010">
+<Vsix xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" 
+      Version="1.0.0" xmlns="http://schemas.microsoft.com/developer/vsx-schema/2010">
 	<Identifier Id="PrettySQLSyntax">
 		<Name>Pretty SQL Syntax</Name>
 		<Author>TryingToImprove</Author>
-		<Version>0.1</Version>
+		<Version>0.9.2</Version>
 		<Description xml:space="preserve">Adds basic SQL syntax highlighting (keywords, functions and variables) to string literals.</Description>
 		<Locale>1033</Locale>
 		<SupportedProducts>
@@ -12,8 +13,43 @@
         <Edition>Premium</Edition>
         <Edition>Pro</Edition>
       </VisualStudio>
-		</SupportedProducts>
-		<SupportedFrameworkRuntimeEdition MinVersion="4.0" MaxVersion="4.0" />
+      <VisualStudio Version="13.0">
+        <Edition>Ultimate</Edition>
+        <Edition>Premium</Edition>
+        <Edition>Pro</Edition>
+      </VisualStudio>
+      <VisualStudio Version="14.0">
+        <Edition>Community</Edition>
+        <Edition>Enterprise</Edition>
+        <Edition>Pro</Edition>
+      </VisualStudio>
+      <VisualStudio Version="15.0">
+        <Edition>Community</Edition>
+        <Edition>Enterprise</Edition>
+        <Edition>Pro</Edition>
+      </VisualStudio>
+      <VisualStudio Version="15.6">
+        <Edition>Community</Edition>
+        <Edition>Enterprise</Edition>
+        <Edition>Pro</Edition>
+      </VisualStudio>
+      <VisualStudio Version="15.7">
+        <Edition>Premium</Edition>
+        <Edition>Enterprise</Edition>
+        <Edition>Pro</Edition>
+      </VisualStudio>
+      <VisualStudio Version="15.8">
+        <Edition>Premium</Edition>
+        <Edition>Enterprise</Edition>
+        <Edition>Pro</Edition>
+      </VisualStudio>
+      <VisualStudio Version="15.9">
+        <Edition>Premium</Edition>
+        <Edition>Enterprise</Edition>
+        <Edition>Pro</Edition>
+      </VisualStudio>
+    </SupportedProducts>
+		<SupportedFrameworkRuntimeEdition MinVersion="4.6" />
 	</Identifier>
 	<References />
 	<Content>

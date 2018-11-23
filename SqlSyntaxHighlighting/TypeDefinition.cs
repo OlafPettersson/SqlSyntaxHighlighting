@@ -129,7 +129,8 @@ namespace SqlSyntaxHighlighting
         {
             public SqlParameterFormat()
             {
-                this.ForegroundColor = Color.FromRgb(173, 216, 230);
+                this.ForegroundColor = Colors.Firebrick;
+                this.IsBold = true;
             }
         }
 

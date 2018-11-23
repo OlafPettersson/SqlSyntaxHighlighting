@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using System.Xml;
 using PoorMansTSqlFormatterLib;
@@ -18,12 +19,14 @@ namespace ConsoleApplication1
 
         public string ErrorOutputPrefix { get; set; }
 
+        private static Regex VariableRegex = new Regex(@"^(?:@@?[a-zA-Z_][a-zA-Z0-9_]*@?@?|[?](?:[a-zA-Z_][a-zA-Z0-9_]*)?)$");
+
         public IEnumerable<KeyValuePair<string, string>> FormatSQLTree(XmlDocument sqlTreeDoc)
         {
-            string rootElement = SqlXmlConstants.ENAME_SQL_ROOT;
+            string rootElement = SqlStructureConstants.ENAME_SQL_ROOT;
             BaseFormatterState state = new BaseFormatterState();
 
-            if (sqlTreeDoc.SelectSingleNode(string.Format("/{0}/@{1}[.=1]", rootElement, SqlXmlConstants.ANAME_ERRORFOUND)) != null)
+            if (sqlTreeDoc.SelectSingleNode(string.Format("/{0}/@{1}[.=1]", rootElement, SqlStructureConstants.ANAME_ERRORFOUND)) != null)
                 state.AddOutputContent(ErrorOutputPrefix);
 
             XmlNodeList rootList = sqlTreeDoc.SelectNodes(string.Format("/{0}/*", rootElement));
@@ -50,77 +53,77 @@ namespace ConsoleApplication1
 
         private static void ProcessSqlNode(BaseFormatterState state, XmlElement contentElement)
         {
-            if (contentElement.GetAttribute(SqlXmlConstants.ANAME_HASERROR) == "1")
+            if (contentElement.GetAttribute(SqlStructureConstants.ANAME_HASERROR) == "1")
                 state.OpenClass(SqlHtmlConstants.CLASS_ERRORHIGHLIGHT);
 
             switch (contentElement.Name)
             {
-                case SqlXmlConstants.ENAME_DDLDETAIL_PARENS:
-                case SqlXmlConstants.ENAME_DDL_PARENS:
-                case SqlXmlConstants.ENAME_FUNCTION_PARENS:
-                case SqlXmlConstants.ENAME_IN_PARENS:
-                case SqlXmlConstants.ENAME_EXPRESSION_PARENS:
-                case SqlXmlConstants.ENAME_SELECTIONTARGET_PARENS:
+                case SqlStructureConstants.ENAME_DDLDETAIL_PARENS:
+                case SqlStructureConstants.ENAME_DDL_PARENS:
+                case SqlStructureConstants.ENAME_FUNCTION_PARENS:
+                case SqlStructureConstants.ENAME_IN_PARENS:
+                case SqlStructureConstants.ENAME_EXPRESSION_PARENS:
+                case SqlStructureConstants.ENAME_SELECTIONTARGET_PARENS:
                     state.AddOutputContent("(");
                     ProcessSqlNodeList(state, contentElement.SelectNodes("*"));
                     state.AddOutputContent(")");
                     break;
 
-                case SqlXmlConstants.ENAME_SQL_ROOT:
-                case SqlXmlConstants.ENAME_SQL_STATEMENT:
-                case SqlXmlConstants.ENAME_SQL_CLAUSE:
-                case SqlXmlConstants.ENAME_BOOLEAN_EXPRESSION:
-                case SqlXmlConstants.ENAME_DDL_PROCEDURAL_BLOCK:
-                case SqlXmlConstants.ENAME_DDL_OTHER_BLOCK:
-                case SqlXmlConstants.ENAME_DDL_DECLARE_BLOCK:
-                case SqlXmlConstants.ENAME_CURSOR_DECLARATION:
-                case SqlXmlConstants.ENAME_BEGIN_END_BLOCK:
-                case SqlXmlConstants.ENAME_TRY_BLOCK:
-                case SqlXmlConstants.ENAME_CATCH_BLOCK:
-                case SqlXmlConstants.ENAME_CASE_STATEMENT:
-                case SqlXmlConstants.ENAME_CASE_INPUT:
-                case SqlXmlConstants.ENAME_CASE_WHEN:
-                case SqlXmlConstants.ENAME_CASE_THEN:
-                case SqlXmlConstants.ENAME_CASE_ELSE:
-                case SqlXmlConstants.ENAME_IF_STATEMENT:
-                case SqlXmlConstants.ENAME_ELSE_CLAUSE:
-                case SqlXmlConstants.ENAME_WHILE_LOOP:
-                case SqlXmlConstants.ENAME_DDL_AS_BLOCK:
-                case SqlXmlConstants.ENAME_BETWEEN_CONDITION:
-                case SqlXmlConstants.ENAME_BETWEEN_LOWERBOUND:
-                case SqlXmlConstants.ENAME_BETWEEN_UPPERBOUND:
-                case SqlXmlConstants.ENAME_CTE_WITH_CLAUSE:
-                case SqlXmlConstants.ENAME_CTE_ALIAS:
-                case SqlXmlConstants.ENAME_CTE_AS_BLOCK:
-                case SqlXmlConstants.ENAME_CURSOR_FOR_BLOCK:
-                case SqlXmlConstants.ENAME_CURSOR_FOR_OPTIONS:
-                case SqlXmlConstants.ENAME_TRIGGER_CONDITION:
-                case SqlXmlConstants.ENAME_COMPOUNDKEYWORD:
-                case SqlXmlConstants.ENAME_BEGIN_TRANSACTION:
-                case SqlXmlConstants.ENAME_ROLLBACK_TRANSACTION:
-                case SqlXmlConstants.ENAME_SAVE_TRANSACTION:
-                case SqlXmlConstants.ENAME_COMMIT_TRANSACTION:
-                case SqlXmlConstants.ENAME_BATCH_SEPARATOR:
-                case SqlXmlConstants.ENAME_SET_OPERATOR_CLAUSE:
-                case SqlXmlConstants.ENAME_CONTAINER_OPEN:
-                case SqlXmlConstants.ENAME_CONTAINER_MULTISTATEMENT:
-                case SqlXmlConstants.ENAME_CONTAINER_SINGLESTATEMENT:
-                case SqlXmlConstants.ENAME_CONTAINER_GENERALCONTENT:
-                case SqlXmlConstants.ENAME_CONTAINER_CLOSE:
-                case SqlXmlConstants.ENAME_SELECTIONTARGET:
-                case SqlXmlConstants.ENAME_PERMISSIONS_BLOCK:
-                case SqlXmlConstants.ENAME_PERMISSIONS_DETAIL:
-                case SqlXmlConstants.ENAME_PERMISSIONS_TARGET:
-                case SqlXmlConstants.ENAME_PERMISSIONS_RECIPIENT:
-                case SqlXmlConstants.ENAME_DDL_WITH_CLAUSE:
-                case SqlXmlConstants.ENAME_MERGE_CLAUSE:
-                case SqlXmlConstants.ENAME_MERGE_TARGET:
-                case SqlXmlConstants.ENAME_MERGE_USING:
-                case SqlXmlConstants.ENAME_MERGE_CONDITION:
-                case SqlXmlConstants.ENAME_MERGE_WHEN:
-                case SqlXmlConstants.ENAME_MERGE_THEN:
-                case SqlXmlConstants.ENAME_MERGE_ACTION:
-                case SqlXmlConstants.ENAME_JOIN_ON_SECTION:
+                case SqlStructureConstants.ENAME_SQL_ROOT:
+                case SqlStructureConstants.ENAME_SQL_STATEMENT:
+                case SqlStructureConstants.ENAME_SQL_CLAUSE:
+                case SqlStructureConstants.ENAME_BOOLEAN_EXPRESSION:
+                case SqlStructureConstants.ENAME_DDL_PROCEDURAL_BLOCK:
+                case SqlStructureConstants.ENAME_DDL_OTHER_BLOCK:
+                case SqlStructureConstants.ENAME_DDL_DECLARE_BLOCK:
+                case SqlStructureConstants.ENAME_CURSOR_DECLARATION:
+                case SqlStructureConstants.ENAME_BEGIN_END_BLOCK:
+                case SqlStructureConstants.ENAME_TRY_BLOCK:
+                case SqlStructureConstants.ENAME_CATCH_BLOCK:
+                case SqlStructureConstants.ENAME_CASE_STATEMENT:
+                case SqlStructureConstants.ENAME_CASE_INPUT:
+                case SqlStructureConstants.ENAME_CASE_WHEN:
+                case SqlStructureConstants.ENAME_CASE_THEN:
+                case SqlStructureConstants.ENAME_CASE_ELSE:
+                case SqlStructureConstants.ENAME_IF_STATEMENT:
+                case SqlStructureConstants.ENAME_ELSE_CLAUSE:
+                case SqlStructureConstants.ENAME_WHILE_LOOP:
+                case SqlStructureConstants.ENAME_DDL_AS_BLOCK:
+                case SqlStructureConstants.ENAME_BETWEEN_CONDITION:
+                case SqlStructureConstants.ENAME_BETWEEN_LOWERBOUND:
+                case SqlStructureConstants.ENAME_BETWEEN_UPPERBOUND:
+                case SqlStructureConstants.ENAME_CTE_WITH_CLAUSE:
+                case SqlStructureConstants.ENAME_CTE_ALIAS:
+                case SqlStructureConstants.ENAME_CTE_AS_BLOCK:
+                case SqlStructureConstants.ENAME_CURSOR_FOR_BLOCK:
+                case SqlStructureConstants.ENAME_CURSOR_FOR_OPTIONS:
+                case SqlStructureConstants.ENAME_TRIGGER_CONDITION:
+                case SqlStructureConstants.ENAME_COMPOUNDKEYWORD:
+                case SqlStructureConstants.ENAME_BEGIN_TRANSACTION:
+                case SqlStructureConstants.ENAME_ROLLBACK_TRANSACTION:
+                case SqlStructureConstants.ENAME_SAVE_TRANSACTION:
+                case SqlStructureConstants.ENAME_COMMIT_TRANSACTION:
+                case SqlStructureConstants.ENAME_BATCH_SEPARATOR:
+                case SqlStructureConstants.ENAME_SET_OPERATOR_CLAUSE:
+                case SqlStructureConstants.ENAME_CONTAINER_OPEN:
+                case SqlStructureConstants.ENAME_CONTAINER_MULTISTATEMENT:
+                case SqlStructureConstants.ENAME_CONTAINER_SINGLESTATEMENT:
+                case SqlStructureConstants.ENAME_CONTAINER_GENERALCONTENT:
+                case SqlStructureConstants.ENAME_CONTAINER_CLOSE:
+                case SqlStructureConstants.ENAME_SELECTIONTARGET:
+                case SqlStructureConstants.ENAME_PERMISSIONS_BLOCK:
+                case SqlStructureConstants.ENAME_PERMISSIONS_DETAIL:
+                case SqlStructureConstants.ENAME_PERMISSIONS_TARGET:
+                case SqlStructureConstants.ENAME_PERMISSIONS_RECIPIENT:
+                case SqlStructureConstants.ENAME_DDL_WITH_CLAUSE:
+                case SqlStructureConstants.ENAME_MERGE_CLAUSE:
+                case SqlStructureConstants.ENAME_MERGE_TARGET:
+                case SqlStructureConstants.ENAME_MERGE_USING:
+                case SqlStructureConstants.ENAME_MERGE_CONDITION:
+                case SqlStructureConstants.ENAME_MERGE_WHEN:
+                case SqlStructureConstants.ENAME_MERGE_THEN:
+                case SqlStructureConstants.ENAME_MERGE_ACTION:
+                case SqlStructureConstants.ENAME_JOIN_ON_SECTION:
                     foreach (XmlNode childNode in contentElement.ChildNodes)
                     {
                         switch (childNode.NodeType)
@@ -138,74 +141,80 @@ namespace ConsoleApplication1
                     }
                     break;
 
-                case SqlXmlConstants.ENAME_COMMENT_MULTILINE:
+                case SqlStructureConstants.ENAME_COMMENT_MULTILINE:
                     state.AddOutputContent("/*" + contentElement.InnerText + "*/", SqlHtmlConstants.CLASS_COMMENT);
                     break;
-                case SqlXmlConstants.ENAME_COMMENT_SINGLELINE:
+                case SqlStructureConstants.ENAME_COMMENT_SINGLELINE:
                     state.AddOutputContent("--" + contentElement.InnerText, SqlHtmlConstants.CLASS_COMMENT);
                     break;
-                case SqlXmlConstants.ENAME_COMMENT_SINGLELINE_CSTYLE:
+                case SqlStructureConstants.ENAME_COMMENT_SINGLELINE_CSTYLE:
                     state.AddOutputContent("//" + contentElement.InnerText, SqlHtmlConstants.CLASS_COMMENT);
                     break;
-                case SqlXmlConstants.ENAME_STRING:
+                case SqlStructureConstants.ENAME_STRING:
                     state.AddOutputContent("'" + contentElement.InnerText.Replace("'", "''") + "'",
                         SqlHtmlConstants.CLASS_STRING);
                     break;
-                case SqlXmlConstants.ENAME_NSTRING:
+                case SqlStructureConstants.ENAME_NSTRING:
                     state.AddOutputContent("N'" + contentElement.InnerText.Replace("'", "''") + "'",
                         SqlHtmlConstants.CLASS_STRING);
                     break;
-                case SqlXmlConstants.ENAME_QUOTED_STRING:
+                case SqlStructureConstants.ENAME_QUOTED_STRING:
                     state.AddOutputContent("\"" + contentElement.InnerText.Replace("\"", "\"\"") + "\"");
                     break;
-                case SqlXmlConstants.ENAME_BRACKET_QUOTED_NAME:
+                case SqlStructureConstants.ENAME_BRACKET_QUOTED_NAME:
                     state.AddOutputContent("[" + contentElement.InnerText.Replace("]", "]]") + "]");
                     break;
 
-                case SqlXmlConstants.ENAME_COMMA:
-                case SqlXmlConstants.ENAME_PERIOD:
-                case SqlXmlConstants.ENAME_SEMICOLON:
-                case SqlXmlConstants.ENAME_ASTERISK:
-                case SqlXmlConstants.ENAME_EQUALSSIGN:
-                case SqlXmlConstants.ENAME_SCOPERESOLUTIONOPERATOR:
-                case SqlXmlConstants.ENAME_AND_OPERATOR:
-                case SqlXmlConstants.ENAME_OR_OPERATOR:
-                case SqlXmlConstants.ENAME_ALPHAOPERATOR:
-                case SqlXmlConstants.ENAME_OTHEROPERATOR:
+                case SqlStructureConstants.ENAME_COMMA:
+                case SqlStructureConstants.ENAME_PERIOD:
+                case SqlStructureConstants.ENAME_SEMICOLON:
+                case SqlStructureConstants.ENAME_ASTERISK:
+                case SqlStructureConstants.ENAME_EQUALSSIGN:
+                case SqlStructureConstants.ENAME_SCOPERESOLUTIONOPERATOR:
+                case SqlStructureConstants.ENAME_AND_OPERATOR:
+                case SqlStructureConstants.ENAME_OR_OPERATOR:
+                case SqlStructureConstants.ENAME_ALPHAOPERATOR:
+                case SqlStructureConstants.ENAME_OTHEROPERATOR:
                     state.AddOutputContent(contentElement.InnerText, SqlHtmlConstants.CLASS_OPERATOR);
                     break;
 
-                case SqlXmlConstants.ENAME_FUNCTION_KEYWORD:
+                case SqlStructureConstants.ENAME_FUNCTION_KEYWORD:
                     state.AddOutputContent(contentElement.InnerText, SqlHtmlConstants.CLASS_FUNCTION);
                     break;
 
-                case SqlXmlConstants.ENAME_PARAMETER:
-                    state.AddOutputContent("@" + contentElement.InnerText, "SQLParameter");
-                    break;
+                //case SqlStructureConstants.ENAME_PARAMETER:
+                //    state.AddOutputContent("@" + contentElement.InnerText, "SQLParameter");
+                //    break;
 
-                case SqlXmlConstants.ENAME_OTHERKEYWORD:
-                case SqlXmlConstants.ENAME_DATATYPE_KEYWORD:
-                case SqlXmlConstants.ENAME_DDL_RETURNS:
-                case SqlXmlConstants.ENAME_PSEUDONAME:
+                case SqlStructureConstants.ENAME_OTHERKEYWORD:
+                case SqlStructureConstants.ENAME_DATATYPE_KEYWORD:
+                case SqlStructureConstants.ENAME_DDL_RETURNS:
+                case SqlStructureConstants.ENAME_PSEUDONAME:
                     state.AddOutputContent(contentElement.InnerText, SqlHtmlConstants.CLASS_KEYWORD);
                     break;
 
-                case SqlXmlConstants.ENAME_NUMBER_VALUE:
-                case SqlXmlConstants.ENAME_MONETARY_VALUE:
-                case SqlXmlConstants.ENAME_BINARY_VALUE:
+                case SqlStructureConstants.ENAME_NUMBER_VALUE:
+                case SqlStructureConstants.ENAME_MONETARY_VALUE:
+                case SqlStructureConstants.ENAME_BINARY_VALUE:
                     state.AddOutputContent(contentElement.InnerText, "SQLNumber");
                     break;
 
-                case SqlXmlConstants.ENAME_OTHERNODE:
-                case SqlXmlConstants.ENAME_WHITESPACE:
-                case SqlXmlConstants.ENAME_LABEL:
+                case SqlStructureConstants.ENAME_OTHERNODE:
+                    string innerText = contentElement.InnerText;
+                    if (innerText != null && VariableRegex.IsMatch(innerText))
+                        state.AddOutputContent(innerText, "SQLParameter");
+                    else
+                        state.AddOutputContent(innerText);
+                    break;
+                case SqlStructureConstants.ENAME_WHITESPACE:
+                case SqlStructureConstants.ENAME_LABEL:
                     state.AddOutputContent(contentElement.InnerText);
                     break;
                 default:
                     throw new Exception("Unrecognized element in SQL Xml!");
             }
 
-            if (contentElement.HasAttribute(SqlXmlConstants.ANAME_HASERROR) && contentElement.GetAttribute(SqlXmlConstants.ANAME_HASERROR) == "1")
+            if (contentElement.HasAttribute(SqlStructureConstants.ANAME_HASERROR) && contentElement.GetAttribute(SqlStructureConstants.ANAME_HASERROR) == "1")
                 state.CloseClass();
         }
 
